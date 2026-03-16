@@ -1,65 +1,92 @@
 import { motion } from "framer-motion";
-import heroImage from "@/assets/hero-salon.jpg";
+import heroImage from "@/assets/hero-barber.jpg";
 
 const HeroSection = () => {
   return (
-    <section id="inicio" className="min-h-screen flex items-center pt-16">
-      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 px-6 lg:px-12 py-16">
-        {/* Left */}
+    <section id="inicio" className="relative min-h-screen flex items-center overflow-hidden">
+      {/* Background image */}
+      <motion.div
+        initial={{ scale: 1.1, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 1.2, ease: "easeOut" }}
+        className="absolute inset-0"
+      >
+        <img
+          src={heroImage}
+          alt="Interior de barbería premium Aura"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/40" />
+      </motion.div>
+
+      {/* Content */}
+      <div className="relative z-10 max-w-7xl mx-auto w-full px-6 lg:px-12 py-32">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className="flex flex-col justify-center"
+          transition={{ duration: 0.8, delay: 0.3 }}
+          className="max-w-2xl"
         >
-          <p className="font-body text-xs tracking-[0.3em] uppercase text-accent mb-6">
-            Estudio de belleza premium
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: 60 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="h-[2px] bg-primary mb-8"
+          />
+
+          <p className="font-body text-xs tracking-[0.4em] uppercase text-primary mb-6">
+            Barbería exclusiva para hombres
           </p>
-          <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-semibold leading-[1.1] tracking-tight mb-6">
-            El arte de
+
+          <h1 className="font-display text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[1.05] tracking-tight mb-8">
+            Estilo
             <br />
-            cuidar tu
-            <br />
-            <span className="italic text-accent">imagen</span>
+            <span className="italic font-normal text-primary">sin</span>
+            {" "}límites
           </h1>
-          <p className="font-body text-muted-foreground max-w-md mb-10 leading-relaxed">
-            Donde cada detalle importa. Descubre un espacio diseñado para
-            realzar tu estilo con técnicas contemporáneas y un trato
-            personalizado.
+
+          <p className="font-body text-muted-foreground max-w-md mb-12 leading-relaxed text-lg">
+            La barbería donde cada corte es una declaración. Precisión,
+            estilo y una experiencia pensada para el hombre moderno.
           </p>
-          <div className="flex gap-4">
-            <a
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <motion.a
               href="#reservar"
-              className="inline-flex items-center justify-center px-8 py-3 bg-primary text-primary-foreground font-body text-sm tracking-wide hover:opacity-90 transition-opacity"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center justify-center px-10 py-4 bg-primary text-primary-foreground font-body text-sm tracking-[0.15em] uppercase font-medium hover:brightness-110 transition-all"
             >
               Reservar cita
-            </a>
-            <a
+            </motion.a>
+            <motion.a
               href="#servicios"
-              className="inline-flex items-center justify-center px-8 py-3 border border-border text-foreground font-body text-sm tracking-wide hover:bg-secondary transition-colors"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center justify-center px-10 py-4 border border-primary/30 text-foreground font-body text-sm tracking-[0.15em] uppercase hover:border-primary hover:text-primary transition-all"
             >
-              Ver servicios
-            </a>
+              Nuestros servicios
+            </motion.a>
           </div>
         </motion.div>
 
-        {/* Right */}
+        {/* Stats bar */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.8 }}
+          className="mt-20 flex gap-12 border-t border-border/50 pt-8"
         >
-          <img
-            src={heroImage}
-            alt="Interior de salón de belleza premium Aura Studio"
-            className="w-full h-[500px] lg:h-[600px] object-cover"
-          />
-          <div className="absolute bottom-6 left-6 bg-background/90 backdrop-blur-sm px-5 py-3 border border-border">
-            <p className="font-body text-xs text-muted-foreground tracking-wide">
-              Más de <span className="text-foreground font-medium">500+</span> clientes satisfechos
-            </p>
-          </div>
+          {[
+            { value: "7+", label: "Años de experiencia" },
+            { value: "3.2K", label: "Clientes satisfechos" },
+            { value: "5★", label: "Valoración media" },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <p className="font-display text-3xl font-bold text-primary">{stat.value}</p>
+              <p className="font-body text-xs text-muted-foreground tracking-wide mt-1">{stat.label}</p>
+            </div>
+          ))}
         </motion.div>
       </div>
     </section>

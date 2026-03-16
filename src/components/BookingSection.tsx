@@ -2,12 +2,12 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, addDays, isSameDay, isToday, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Clock, User, Check } from "lucide-react";
 import { toast } from "sonner";
 
 interface BookedSlot {
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm
+  date: string;
+  time: string;
   name: string;
   service: string;
 }
@@ -19,26 +19,31 @@ const TIME_SLOTS = [
 ];
 
 const SERVICES = [
-  "Corte Clásico", "Coloración", "Tratamiento Capilar",
-  "Peinado & Styling", "Barba & Afeitado", "Experiencia Premium",
+  "Corte Degradado", "Corte + Diseño", "Afeitado Clásico",
+  "Barba Completa", "Tratamiento Capilar", "Experiencia VIP",
 ];
 
-// Pre-booked demo data
 const initialBooked: BookedSlot[] = [
-  { date: format(new Date(), "yyyy-MM-dd"), time: "10:00", name: "María G.", service: "Coloración" },
-  { date: format(new Date(), "yyyy-MM-dd"), time: "11:30", name: "Carlos R.", service: "Corte Clásico" },
-  { date: format(addDays(new Date(), 1), "yyyy-MM-dd"), time: "09:30", name: "Laura M.", service: "Experiencia Premium" },
-  { date: format(addDays(new Date(), 1), "yyyy-MM-dd"), time: "16:00", name: "Pablo S.", service: "Barba & Afeitado" },
-  { date: format(addDays(new Date(), 2), "yyyy-MM-dd"), time: "12:00", name: "Ana T.", service: "Tratamiento Capilar" },
+  { date: format(new Date(), "yyyy-MM-dd"), time: "10:00", name: "Alejandro M.", service: "Corte Degradado" },
+  { date: format(new Date(), "yyyy-MM-dd"), time: "10:30", name: "David R.", service: "Afeitado Clásico" },
+  { date: format(new Date(), "yyyy-MM-dd"), time: "11:30", name: "Carlos P.", service: "Experiencia VIP" },
+  { date: format(new Date(), "yyyy-MM-dd"), time: "16:00", name: "Miguel S.", service: "Barba Completa" },
+  { date: format(new Date(), "yyyy-MM-dd"), time: "17:30", name: "Javier L.", service: "Corte + Diseño" },
+  { date: format(addDays(new Date(), 1), "yyyy-MM-dd"), time: "09:30", name: "Pablo T.", service: "Experiencia VIP" },
+  { date: format(addDays(new Date(), 1), "yyyy-MM-dd"), time: "12:00", name: "Andrés K.", service: "Tratamiento Capilar" },
+  { date: format(addDays(new Date(), 1), "yyyy-MM-dd"), time: "16:30", name: "Sergio N.", service: "Corte Degradado" },
+  { date: format(addDays(new Date(), 2), "yyyy-MM-dd"), time: "10:00", name: "Fernando G.", service: "Barba Completa" },
+  { date: format(addDays(new Date(), 2), "yyyy-MM-dd"), time: "13:00", name: "Roberto D.", service: "Afeitado Clásico" },
 ];
 
 const BookingSection = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weekStart, setWeekStart] = useState(startOfDay(new Date()));
   const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>(initialBooked);
-  const [formOpen, setFormOpen] = useState<string | null>(null); // time slot
+  const [formOpen, setFormOpen] = useState<string | null>(null);
   const [formName, setFormName] = useState("");
   const [formService, setFormService] = useState(SERVICES[0]);
+  const [justBooked, setJustBooked] = useState<string | null>(null);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
@@ -60,186 +65,279 @@ const BookingSection = () => {
     return h < now.getHours() || (h === now.getHours() && m <= now.getMinutes());
   };
 
+  const bookedCount = bookedSlots.filter((s) => s.date === dateKey).length;
+  const availableCount = TIME_SLOTS.filter((t) => !isSlotBooked(t) && !isPastSlot(t)).length;
+
   const handleBook = (time: string) => {
     if (!formName.trim()) {
-      toast.error("Por favor, introduce tu nombre");
+      toast.error("Introduce tu nombre para reservar");
       return;
     }
-    const newSlot: BookedSlot = {
-      date: dateKey,
-      time,
-      name: formName.trim(),
-      service: formService,
-    };
-    setBookedSlots((prev) => [...prev, newSlot]);
+    setBookedSlots((prev) => [
+      ...prev,
+      { date: dateKey, time, name: formName.trim(), service: formService },
+    ]);
     setFormOpen(null);
     setFormName("");
     setFormService(SERVICES[0]);
-    toast.success("¡Cita reservada con éxito!", {
-      description: `${format(selectedDate, "d 'de' MMMM", { locale: es })} a las ${time} — ${formService}`,
+    setJustBooked(time);
+    setTimeout(() => setJustBooked(null), 2000);
+    toast.success("¡Cita reservada!", {
+      description: `${format(selectedDate, "EEEE d 'de' MMMM", { locale: es })} a las ${time} — ${formService}`,
     });
   };
 
   return (
-    <section id="reservar" className="section-padding bg-secondary/30">
-      <div className="max-w-5xl mx-auto">
+    <section id="reservar" className="section-padding">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mb-12"
+          className="mb-14"
         >
-          <p className="font-body text-xs tracking-[0.3em] uppercase text-accent mb-4">
+          <motion.div
+            initial={{ width: 0 }}
+            whileInView={{ width: 60 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="h-[2px] bg-primary mb-6"
+          />
+          <p className="font-body text-xs tracking-[0.3em] uppercase text-primary mb-4">
             Reserva online
           </p>
-          <h2 className="font-display text-4xl md:text-5xl font-semibold tracking-tight mb-2">
-            Elige tu horario
+          <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-3">
+            Tu hora,{" "}
+            <span className="italic font-normal text-primary">tu estilo</span>
           </h2>
-          <p className="font-body text-muted-foreground">
-            Selecciona un día y una franja de 30 minutos disponible.
+          <p className="font-body text-muted-foreground max-w-lg">
+            Elige día y franja horaria. Las citas reservadas se bloquean al instante.
           </p>
         </motion.div>
 
         {/* Week Selector */}
-        <div className="flex items-center justify-between mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="flex items-center gap-3 mb-6"
+        >
           <button
             onClick={() => setWeekStart((d) => addDays(d, -7))}
-            className="p-2 border border-border hover:bg-secondary transition-colors"
+            className="p-3 border border-border hover:border-primary hover:text-primary transition-all duration-300"
             aria-label="Semana anterior"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={16} />
           </button>
 
-          <div className="flex gap-2 overflow-x-auto">
+          <div className="flex-1 flex gap-2 overflow-x-auto pb-1">
             {weekDays.map((day) => {
               const active = isSameDay(day, selectedDate);
               const past = isBefore(day, startOfDay(new Date()));
+              const dayBookedCount = bookedSlots.filter(
+                (s) => s.date === format(day, "yyyy-MM-dd")
+              ).length;
               return (
-                <button
+                <motion.button
                   key={day.toISOString()}
                   disabled={past}
                   onClick={() => setSelectedDate(day)}
-                  className={`flex flex-col items-center px-4 py-3 min-w-[72px] border transition-colors font-body text-sm
+                  whileHover={!past ? { scale: 1.03 } : {}}
+                  whileTap={!past ? { scale: 0.97 } : {}}
+                  className={`flex-1 min-w-[80px] flex flex-col items-center py-4 border transition-all duration-300
                     ${active
                       ? "bg-primary text-primary-foreground border-primary"
                       : past
-                        ? "border-border text-muted-foreground/40 cursor-not-allowed"
-                        : "border-border hover:bg-secondary text-foreground"
+                        ? "border-border/50 text-muted-foreground/30 cursor-not-allowed"
+                        : "border-border hover:border-primary/50 text-foreground"
                     }`}
                 >
-                  <span className="text-[10px] uppercase tracking-wider">
+                  <span className="text-[10px] uppercase tracking-[0.2em] font-body">
                     {format(day, "EEE", { locale: es })}
                   </span>
-                  <span className="text-lg font-medium mt-0.5">
+                  <span className="text-xl font-display font-bold mt-1">
                     {format(day, "d")}
                   </span>
-                  <span className="text-[10px]">
+                  <span className="text-[10px] font-body mt-0.5">
                     {format(day, "MMM", { locale: es })}
                   </span>
-                </button>
+                  {dayBookedCount > 0 && !past && (
+                    <div className={`w-1.5 h-1.5 rounded-full mt-2 ${active ? "bg-primary-foreground" : "bg-booked"}`} />
+                  )}
+                </motion.button>
               );
             })}
           </div>
 
           <button
             onClick={() => setWeekStart((d) => addDays(d, 7))}
-            className="p-2 border border-border hover:bg-secondary transition-colors"
+            className="p-3 border border-border hover:border-primary hover:text-primary transition-all duration-300"
             aria-label="Semana siguiente"
           >
-            <ChevronRight size={18} />
+            <ChevronRight size={16} />
           </button>
+        </motion.div>
+
+        {/* Stats bar */}
+        <div className="flex items-center gap-6 mb-8 font-body text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-booked rounded-sm" />
+            <span className="text-muted-foreground">
+              Reservadas: <span className="text-foreground font-medium">{bookedCount}</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 border border-primary/40 rounded-sm" />
+            <span className="text-muted-foreground">
+              Disponibles: <span className="text-primary font-medium">{availableCount}</span>
+            </span>
+          </div>
+          <div className="ml-auto text-muted-foreground">
+            {format(selectedDate, "EEEE, d 'de' MMMM yyyy", { locale: es })}
+          </div>
         </div>
 
         {/* Time Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-px bg-border">
-          {TIME_SLOTS.map((time) => {
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"
+        >
+          {TIME_SLOTS.map((time, i) => {
             const booked = isSlotBooked(time);
             const past = isPastSlot(time);
             const booking = getBooking(time);
             const isFormTarget = formOpen === time;
+            const wasJustBooked = justBooked === time;
 
             return (
-              <div key={time} className="bg-background relative">
+              <motion.div
+                key={time}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.3, delay: i * 0.03 }}
+                className="relative"
+              >
                 <AnimatePresence mode="wait">
-                  {isFormTarget ? (
+                  {isFormTarget && (
                     <motion.div
                       key="form"
-                      initial={{ opacity: 0, scale: 0.95 }}
+                      initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      className="absolute inset-0 z-10 bg-background border border-accent p-3 flex flex-col gap-2 min-h-[180px]"
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute inset-0 z-20 bg-card border-2 border-primary p-3 flex flex-col gap-2 min-h-[200px] shadow-lg shadow-primary/10"
                     >
-                      <p className="font-body text-xs font-medium text-accent">{time}</p>
-                      <input
-                        type="text"
-                        value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
-                        placeholder="Tu nombre"
-                        className="w-full px-2 py-1.5 text-xs font-body border border-border bg-background focus:border-accent focus:outline-none"
-                      />
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-display text-lg font-bold text-primary">{time}</span>
+                        <button
+                          onClick={() => { setFormOpen(null); setFormName(""); }}
+                          className="text-muted-foreground hover:text-foreground transition-colors text-xs"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <User size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={formName}
+                          onChange={(e) => setFormName(e.target.value)}
+                          placeholder="Tu nombre"
+                          className="w-full pl-7 pr-2 py-2 text-xs font-body border border-border bg-background focus:border-primary focus:outline-none transition-colors"
+                          autoFocus
+                        />
+                      </div>
                       <select
                         value={formService}
                         onChange={(e) => setFormService(e.target.value)}
-                        className="w-full px-2 py-1.5 text-xs font-body border border-border bg-background focus:border-accent focus:outline-none"
+                        className="w-full px-2 py-2 text-xs font-body border border-border bg-background focus:border-primary focus:outline-none transition-colors"
                       >
                         {SERVICES.map((s) => (
                           <option key={s} value={s}>{s}</option>
                         ))}
                       </select>
-                      <div className="flex gap-1 mt-auto">
-                        <button
-                          onClick={() => handleBook(time)}
-                          className="flex-1 py-1.5 bg-primary text-primary-foreground text-xs font-body hover:opacity-90 transition-opacity"
-                        >
-                          Confirmar
-                        </button>
-                        <button
-                          onClick={() => { setFormOpen(null); setFormName(""); }}
-                          className="px-3 py-1.5 border border-border text-xs font-body hover:bg-secondary transition-colors"
-                        >
-                          ✕
-                        </button>
-                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleBook(time)}
+                        className="mt-auto py-2 bg-primary text-primary-foreground text-xs font-body font-medium tracking-wide uppercase hover:brightness-110 transition-all"
+                      >
+                        Confirmar reserva
+                      </motion.button>
                     </motion.div>
-                  ) : null}
+                  )}
                 </AnimatePresence>
 
-                <button
+                <motion.button
                   disabled={booked || past}
                   onClick={() => !booked && !past && setFormOpen(time)}
-                  className={`w-full p-4 flex flex-col items-center gap-1 transition-colors min-h-[100px] justify-center
+                  whileHover={!booked && !past ? { scale: 1.03 } : {}}
+                  whileTap={!booked && !past ? { scale: 0.97 } : {}}
+                  className={`w-full p-4 flex flex-col items-center gap-2 transition-all duration-300 min-h-[120px] justify-center border relative overflow-hidden
                     ${booked
-                      ? "bg-muted cursor-not-allowed"
+                      ? "bg-booked-muted border-booked/40 cursor-not-allowed"
                       : past
-                        ? "bg-muted/50 cursor-not-allowed"
-                        : "hover:bg-accent/10 cursor-pointer"
-                    }`}
+                        ? "bg-muted/30 border-border/50 cursor-not-allowed opacity-40"
+                        : "border-border hover:border-primary/60 hover:bg-card cursor-pointer"
+                    }
+                    ${wasJustBooked ? "animate-scale-in" : ""}
+                  `}
                 >
-                  <span className={`font-body text-sm font-medium ${booked || past ? "text-muted-foreground" : "text-foreground"}`}>
+                  {booked && (
+                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-booked" />
+                  )}
+
+                  <span className={`font-display text-lg font-bold ${booked ? "text-booked" : past ? "text-muted-foreground" : "text-foreground"}`}>
                     {time}
                   </span>
+
                   {booked && booking ? (
-                    <div className="flex flex-col items-center gap-0.5">
-                      <Check size={14} className="text-accent" />
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-1">
+                        <Lock size={10} className="text-booked" />
+                        <span className="font-body text-[10px] text-booked font-medium uppercase tracking-wider">
+                          Reservada
+                        </span>
+                      </div>
                       <span className="font-body text-[10px] text-muted-foreground">
                         {booking.name}
                       </span>
                     </div>
                   ) : past ? (
-                    <span className="font-body text-[10px] text-muted-foreground">Pasado</span>
+                    <span className="font-body text-[10px] text-muted-foreground">No disponible</span>
                   ) : (
-                    <span className="font-body text-[10px] text-accent">Disponible</span>
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-1">
+                        <Clock size={10} className="text-primary" />
+                        <span className="font-body text-[10px] text-primary font-medium uppercase tracking-wider">
+                          Disponible
+                        </span>
+                      </div>
+                      <span className="font-body text-[10px] text-muted-foreground">30 min</span>
+                    </div>
                   )}
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
-        <p className="font-body text-xs text-muted-foreground mt-6 text-center">
-          Cada cita tiene una duración de 30 minutos · Las franjas reservadas se bloquean automáticamente
-        </p>
+        {/* Legend */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="font-body text-xs text-muted-foreground mt-8 text-center border-t border-border pt-6"
+        >
+          Cada cita dura 30 minutos · Las horas reservadas se bloquean automáticamente en rojo · Haz clic en una franja disponible para reservar
+        </motion.p>
       </div>
     </section>
   );
