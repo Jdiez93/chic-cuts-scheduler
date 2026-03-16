@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
 const navLinks = [
@@ -14,19 +14,23 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4 lg:px-12">
-        <a href="#inicio" className="font-display text-xl font-semibold tracking-tight">
-          Aura<span className="text-accent">.</span>
+    <motion.nav
+      initial={{ y: -80 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border"
+    >
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-5 lg:px-12">
+        <a href="#inicio" className="font-display text-2xl font-bold tracking-tight">
+          AURA<span className="text-primary">.</span>
         </a>
 
-        {/* Desktop */}
-        <ul className="hidden md:flex items-center gap-8">
+        <ul className="hidden md:flex items-center gap-10">
           {navLinks.map((l) => (
             <li key={l.href}>
               <a
                 href={l.href}
-                className="font-body text-sm tracking-wide text-muted-foreground hover:text-foreground transition-colors"
+                className="font-body text-xs tracking-[0.2em] uppercase text-muted-foreground hover:text-primary transition-colors duration-300"
               >
                 {l.label}
               </a>
@@ -34,7 +38,6 @@ const Navbar = () => {
           ))}
         </ul>
 
-        {/* Mobile toggle */}
         <button
           className="md:hidden text-foreground"
           onClick={() => setOpen(!open)}
@@ -44,29 +47,31 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobile menu */}
-      {open && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="md:hidden border-t border-border bg-background px-6 pb-6"
-        >
-          <ul className="flex flex-col gap-4 pt-4">
-            {navLinks.map((l) => (
-              <li key={l.href}>
-                <a
-                  href={l.href}
-                  onClick={() => setOpen(false)}
-                  className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {l.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </motion.div>
-      )}
-    </nav>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden border-t border-border bg-background overflow-hidden"
+          >
+            <ul className="flex flex-col gap-4 px-6 py-6">
+              {navLinks.map((l) => (
+                <li key={l.href}>
+                  <a
+                    href={l.href}
+                    onClick={() => setOpen(false)}
+                    className="font-body text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {l.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.nav>
   );
 };
 
