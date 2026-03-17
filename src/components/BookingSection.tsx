@@ -1,11 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, addDays, isSameDay, isToday, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Lock, Clock, User, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Clock, User, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BookedSlot {
+  id: string;
   date: string;
   time: string;
   name: string;
@@ -23,27 +25,37 @@ const SERVICES = [
   "Barba Completa", "Tratamiento Capilar", "Experiencia VIP",
 ];
 
-const initialBooked: BookedSlot[] = [
-  { date: format(new Date(), "yyyy-MM-dd"), time: "10:00", name: "Alejandro M.", service: "Corte Degradado" },
-  { date: format(new Date(), "yyyy-MM-dd"), time: "10:30", name: "David R.", service: "Afeitado Clásico" },
-  { date: format(new Date(), "yyyy-MM-dd"), time: "11:30", name: "Carlos P.", service: "Experiencia VIP" },
-  { date: format(new Date(), "yyyy-MM-dd"), time: "16:00", name: "Miguel S.", service: "Barba Completa" },
-  { date: format(new Date(), "yyyy-MM-dd"), time: "17:30", name: "Javier L.", service: "Corte + Diseño" },
-  { date: format(addDays(new Date(), 1), "yyyy-MM-dd"), time: "09:30", name: "Pablo T.", service: "Experiencia VIP" },
-  { date: format(addDays(new Date(), 1), "yyyy-MM-dd"), time: "12:00", name: "Andrés K.", service: "Tratamiento Capilar" },
-  { date: format(addDays(new Date(), 1), "yyyy-MM-dd"), time: "16:30", name: "Sergio N.", service: "Corte Degradado" },
-  { date: format(addDays(new Date(), 2), "yyyy-MM-dd"), time: "10:00", name: "Fernando G.", service: "Barba Completa" },
-  { date: format(addDays(new Date(), 2), "yyyy-MM-dd"), time: "13:00", name: "Roberto D.", service: "Afeitado Clásico" },
-];
-
 const BookingSection = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weekStart, setWeekStart] = useState(startOfDay(new Date()));
-  const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>(initialBooked);
+  const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>([]);
   const [formOpen, setFormOpen] = useState<string | null>(null);
   const [formName, setFormName] = useState("");
+  const [formEmail, setFormEmail] = useState("");
   const [formService, setFormService] = useState(SERVICES[0]);
   const [justBooked, setJustBooked] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchBookings = useCallback(async () => {
+    const { data } = await supabase
+      .from("bookings")
+      .select("id, customer_name, booking_date, booking_time, service");
+    if (data) {
+      setBookedSlots(
+        data.map((b) => ({
+          id: b.id,
+          date: b.booking_date,
+          time: b.booking_time,
+          name: b.customer_name,
+          service: b.service,
+        }))
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
@@ -68,19 +80,42 @@ const BookingSection = () => {
   const bookedCount = bookedSlots.filter((s) => s.date === dateKey).length;
   const availableCount = TIME_SLOTS.filter((t) => !isSlotBooked(t) && !isPastSlot(t)).length;
 
-  const handleBook = (time: string) => {
+  const handleBook = async (time: string) => {
     if (!formName.trim()) {
       toast.error("Introduce tu nombre para reservar");
       return;
     }
-    setBookedSlots((prev) => [
-      ...prev,
-      { date: dateKey, time, name: formName.trim(), service: formService },
-    ]);
+    if (!formEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formEmail)) {
+      toast.error("Introduce un email válido");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.from("bookings").insert({
+      customer_name: formName.trim(),
+      customer_email: formEmail.trim().toLowerCase(),
+      service: formService,
+      booking_date: dateKey,
+      booking_time: time,
+    });
+
+    if (error) {
+      if (error.code === "23505") {
+        toast.error("Esa hora acaba de ser reservada por alguien");
+      } else {
+        toast.error("Error al reservar. Inténtalo de nuevo.");
+      }
+      setLoading(false);
+      return;
+    }
+
+    await fetchBookings();
     setFormOpen(null);
     setFormName("");
+    setFormEmail("");
     setFormService(SERVICES[0]);
     setJustBooked(time);
+    setLoading(false);
     setTimeout(() => setJustBooked(null), 2000);
     toast.success("¡Cita reservada!", {
       description: `${format(selectedDate, "EEEE d 'de' MMMM", { locale: es })} a las ${time} — ${formService}`,
@@ -232,12 +267,12 @@ const BookingSection = () => {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute inset-0 z-20 bg-card border-2 border-primary p-3 flex flex-col gap-2 min-h-[200px] shadow-lg shadow-primary/10"
+                      className="absolute inset-0 z-20 bg-card border-2 border-primary p-3 flex flex-col gap-2 min-h-[240px] shadow-lg shadow-primary/10"
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-display text-lg font-bold text-primary">{time}</span>
                         <button
-                          onClick={() => { setFormOpen(null); setFormName(""); }}
+                          onClick={() => { setFormOpen(null); setFormName(""); setFormEmail(""); }}
                           className="text-muted-foreground hover:text-foreground transition-colors text-xs"
                         >
                           ✕
@@ -254,6 +289,16 @@ const BookingSection = () => {
                           autoFocus
                         />
                       </div>
+                      <div className="relative">
+                        <Mail size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          type="email"
+                          value={formEmail}
+                          onChange={(e) => setFormEmail(e.target.value)}
+                          placeholder="Tu email"
+                          className="w-full pl-7 pr-2 py-2 text-xs font-body border border-border bg-background focus:border-primary focus:outline-none transition-colors"
+                        />
+                      </div>
                       <select
                         value={formService}
                         onChange={(e) => setFormService(e.target.value)}
@@ -267,9 +312,10 @@ const BookingSection = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleBook(time)}
-                        className="mt-auto py-2 bg-primary text-primary-foreground text-xs font-body font-medium tracking-wide uppercase hover:brightness-110 transition-all"
+                        disabled={loading}
+                        className="mt-auto py-2 bg-primary text-primary-foreground text-xs font-body font-medium tracking-wide uppercase hover:brightness-110 transition-all disabled:opacity-50"
                       >
-                        Confirmar reserva
+                        {loading ? "Reservando..." : "Confirmar reserva"}
                       </motion.button>
                     </motion.div>
                   )}
